@@ -1,10 +1,13 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv() 
 
 class Config:
-    # Replace `username`, `password`, `localhost`, and `rent_app` with your database details
     SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # Disables unnecessary overhead
     SECRET_KEY = os.getenv("SECRET_KEY")
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 
 #TODO: UNCOMMENT WHEN START MAIL DEVELOPMENT
     # # Email server configuration
