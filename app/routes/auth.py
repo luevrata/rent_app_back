@@ -1,3 +1,5 @@
+from app.models.landlord import Landlord
+from app.models.tenant import Tenant
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
 from app.models.user import User
@@ -64,7 +66,22 @@ def register_user():
         password=hashed_password,
         role=data['role']
     )
+
     db.session.add(new_user)
+    db.session.commit()
+
+
+
+    # Assign the user to a specific role (Tenant or Landlord)
+    if data['role'].lower() == 'tenant':
+        new_tenant = Tenant(tenant_id=new_user.user_id)
+        db.session.add(new_tenant)
+    elif data['role'].lower() == 'landlord':
+        new_landlord = Landlord(landlord_id=new_user.user_id)
+        db.session.add(new_landlord)
+    else:
+        return jsonify({"error": "Invalid role"}), 400
+
     db.session.commit()
     
     return jsonify({"message": "User registered successfully"}), 201
