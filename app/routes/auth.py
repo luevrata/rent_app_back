@@ -5,10 +5,10 @@ from flask_jwt_extended import create_access_token
 from app.models.user import User
 from app.extensions import bcrypt, db
 
-auth = Blueprint("auth", __name__)
+auth_bp = Blueprint("auth", __name__)
 
 
-@auth.route("/login", methods=["POST"])
+@auth_bp.route("/login", methods=["POST"])
 def login_user():
     """
     Handle user login and return a JWT access token upon successful authentication.
@@ -28,7 +28,7 @@ def login_user():
         password = data["password"].encode('utf-8')
         if bcrypt.check_password_hash(user.password, password):
             # Generate JWT access token
-            access_token = create_access_token(identity={"user_id": user.user_id, "role": user.role}, fresh=True)
+            access_token = create_access_token(identity=str(user.user_id), fresh=True)
             return jsonify({
                 "token": access_token,
                 "user": {
@@ -43,7 +43,7 @@ def login_user():
 
 
 
-@auth.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register_user():
     """
     Handle user registration by validating input, hashing the password, 
