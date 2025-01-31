@@ -37,6 +37,8 @@ def configure_app(app, env):
     """Configure the Flask app based on the environment."""
     # Common configurations
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+    app.config["JWT_SECRET_KEY"] = os.getenv('JWT_SECRET_KEY')
 
     # Environment-specific configurations
     if env == "testing":
@@ -46,6 +48,6 @@ def configure_app(app, env):
         app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DEV_DATABASE_URL")
     elif env == "production":
         app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-        app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+        # app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
     else:
         raise ValueError(f"Invalid FLASK_ENV: {env}")
