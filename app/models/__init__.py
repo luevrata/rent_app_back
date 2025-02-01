@@ -5,3 +5,4 @@ from .property import Property
 from .groupChat import GroupChat
 from .message import Message
 from .rentalContract import RentalContract
+from .rentalContractTenants import RentalContractTenants

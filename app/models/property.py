@@ -9,7 +9,6 @@ class Property(db.Model):
 
     # Relationships
     landlord = relationship("Landlord", back_populates="properties")
-    group_chat = relationship("GroupChat", uselist=False, back_populates="property")
     rental_contracts = relationship("RentalContract", back_populates="property")
 
     def to_dict(self):
@@ -20,7 +19,6 @@ class Property(db.Model):
             'property_id': self.property_id,
             'landlord_id': self.landlord_id,
             'address': self.address,
-            'group_chat_id': self.group_chat.chat_id if self.group_chat else None,
             'rental_contracts': [contract.contract_id for contract in self.rental_contracts] if self.rental_contracts else []
         }
 
