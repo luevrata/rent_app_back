@@ -6,6 +6,7 @@ class Property(db.Model):
     property_id = db.Column(db.Integer, primary_key=True)
     landlord_id = db.Column(db.Integer, db.ForeignKey('landlord.landlord_id'), nullable=False)
     address = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default="vacant")
 
     # Relationships
     landlord = relationship("Landlord", back_populates="properties")
@@ -19,6 +20,7 @@ class Property(db.Model):
             'property_id': self.property_id,
             'landlord_id': self.landlord_id,
             'address': self.address,
+            'status': self.status,
             'rental_contracts': [contract.contract_id for contract in self.rental_contracts] if self.rental_contracts else []
         }
 

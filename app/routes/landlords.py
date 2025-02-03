@@ -61,3 +61,40 @@ def create_landlord_property():
     except Exception as e:
         db.session.rollback()
         return error_response("An error occurred while creating the property.", 500)
+
+# Retrieve all properties for a landlord
+@landlords_bp.route("/properties", methods=["GET"])
+@jwt_required()
+def get_landlord_properties():
+    """
+    Get all properties for the authenticated landlord, with optional pagination and filtering.
+
+    Query Parameters:
+        page (int): The page number (default: 1).
+        per_page (int): The number of items per page (default: 10).
+        status (str): Filter properties by status.
+
+    Returns:
+        JSON: A list of properties with pagination metadata or an error message.
+    """
+    user = get_current_user()
+    if not user or user.role != "Landlord":
+        return error_response("Unauthorized", 403)
+
+    # Pagination and filters
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=10, type=int)
+    status = request.args.get("status", type=str)
+
+    query = Property.query.filter_by(landlord_id=user.user_id)
+    if status:
+        query = query.filter(Property.status == status)
+
+    properties = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        "total": properties.total,
+        "page": properties.page,
+        "per_page": properties.per_page,
+        "properties": [property.to_dict() for property in properties.items]
+    })
