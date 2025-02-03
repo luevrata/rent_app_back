@@ -4,7 +4,7 @@ from app.extensions import db, bcrypt
 from app.models.user import User
 from app.models.landlord import Landlord
 from app.models.property import Property
-from app.models.rentalContractTenants import RentalContractTenants
+from app.models.tenancyTenants import TenancyTenants
 from flask_jwt_extended import create_access_token
 import os
 from dotenv import load_dotenv
@@ -46,7 +46,7 @@ def session(app):
         db.session.query(Property).delete()
         db.session.query(Landlord).delete()
         db.session.query(User).delete()
-        db.session.query(RentalContractTenants).delete()
+        db.session.query(TenancyTenants).delete()
 
         yield db.session
 

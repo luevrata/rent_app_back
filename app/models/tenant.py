@@ -7,8 +7,8 @@ class Tenant(db.Model):
     user = relationship("User", back_populates="tenant")
 
     # Relationships
-    rental_contract_tenants = relationship(
-        "RentalContractTenants", back_populates="tenant"
+    tenancy_tenants = relationship(
+        "TenancyTenants", back_populates="tenant"
     )
 
     def __repr__(self):

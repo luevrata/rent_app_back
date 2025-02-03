@@ -8,7 +8,7 @@ class GroupChat(db.Model):
 
     # Relationships
     messages = relationship("Message", back_populates="group_chat")
-    rental_contract = relationship("RentalContract", back_populates="group_chat", uselist=False)
+    tenancy = relationship("Tenancy", back_populates="group_chat", uselist=False)
 
     def __repr__(self):
         return f"<GroupChat ID: {self.group_chat_id}, Name: {self.group_name}>"

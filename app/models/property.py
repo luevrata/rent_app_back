@@ -10,7 +10,7 @@ class Property(db.Model):
 
     # Relationships
     landlord = relationship("Landlord", back_populates="properties")
-    rental_contracts = relationship("RentalContract", back_populates="property")
+    tenancies = relationship("Tenancy", back_populates="property")
 
     def to_dict(self):
         """
@@ -21,7 +21,7 @@ class Property(db.Model):
             'landlord_id': self.landlord_id,
             'address': self.address,
             'status': self.status,
-            'rental_contracts': [contract.contract_id for contract in self.rental_contracts] if self.rental_contracts else []
+            'tenancies': [tenancy.tenancy_id for tenancy in self.tenancies] if self.tenancies else []
         }
 
 
