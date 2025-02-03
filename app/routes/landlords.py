@@ -62,7 +62,7 @@ def create_landlord_property():
         db.session.rollback()
         return error_response("An error occurred while creating the property.", 500)
 
-# Retrieve all properties for a landlord
+# Get all properties for a landlord
 @landlords_bp.route("/properties", methods=["GET"])
 @jwt_required()
 def get_landlord_properties():
