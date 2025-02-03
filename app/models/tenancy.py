@@ -1,6 +1,5 @@
 from app.extensions import db
 from sqlalchemy.orm import relationship
-from sqlalchemy.schema import UniqueConstraint
 
 class Tenancy(db.Model):
     __tablename__ = 'tenancy'

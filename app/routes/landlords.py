@@ -98,3 +98,29 @@ def get_landlord_properties():
         "per_page": properties.per_page,
         "properties": [property.to_dict() for property in properties.items]
     })
+
+# Get a single property
+@landlords_bp.route("/properties/<int:property_id>", methods=["GET"])
+@jwt_required()
+def get_property(property_id):
+    """
+    Get details of a specific property based on property ID for the authenticated landlord.
+
+    Path Parameters:
+        property_id (int): The ID of the property to retrieve.
+
+    Returns:
+        JSON: Details of the specific property or an error message.
+    """
+    try:
+        user = get_current_user()
+        if not user or user.role != "Landlord":
+            return error_response("Unauthorized", 403)
+
+        property = Property.query.filter_by(property_id=property_id, landlord_id=user.user_id).first()
+        if not property:
+            return error_response("Property not found", 404)
+
+        return jsonify(property.to_dict()), 200
+    except Exception as e:
+        return error_response("An error occurred while retrieving the property.", 500)
