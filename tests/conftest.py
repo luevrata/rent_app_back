@@ -55,7 +55,7 @@ def session(app):
         connection.close()
 
 @pytest.fixture(scope="function")
-def create_test_user(session):
+def test_tenant_1(session):
     """Create a test user with Tenant role."""
     hashed_password = bcrypt.generate_password_hash("password123").decode("utf-8")
     user = User(
@@ -70,7 +70,7 @@ def create_test_user(session):
     return user
 
 @pytest.fixture(scope="function")
-def create_test_landlord_1(session):
+def test_landlord_1(session):
     """Create a test landlord user 1 with associated Landlord record."""
     hashed_password = bcrypt.generate_password_hash("password123").decode("utf-8")
     user = User(
@@ -89,7 +89,7 @@ def create_test_landlord_1(session):
     return user
 
 @pytest.fixture
-def create_test_landlord_2(session):
+def test_landlord_2(session):
     """Create a test landlord user 2 with associated Landlord record."""
     hashed_password = bcrypt.generate_password_hash("password123").decode("utf-8")
     user = User(
@@ -108,16 +108,28 @@ def create_test_landlord_2(session):
     return user
 
 @pytest.fixture(scope="function")
-def auth_token(app, create_test_user):
+def auth_token(app, test_tenant_1):
     """Create a JWT token for the test tenant user."""
     with app.app_context():
-        token = create_access_token(identity=str(create_test_user.user_id))
+        token = create_access_token(identity=str(test_tenant_1.user_id))
         return token
 
 @pytest.fixture(scope="function")
-def landlord_token(app, create_test_landlord_1):
+def landlord_token(app, test_landlord_1):
     """Create a JWT token for the test landlord user."""
     with app.app_context():
-        token = create_access_token(identity=str(create_test_landlord_1.user_id))
+        token = create_access_token(identity=str(test_landlord_1.user_id))
         return token
 
+@pytest.fixture(scope="function")
+def test_property_1(session, test_landlord_1):
+    """
+    Create a sample property associated with the test landlord.
+    """
+    property = Property(
+        address="123 Test Street",
+        landlord_id=test_landlord_1.user_id
+    )
+    session.add(property)
+    session.commit()
+    return property
