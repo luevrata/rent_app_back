@@ -1,12 +1,11 @@
 from app.models.user import User
 from app.models.property import Property
-from app.models.landlord import Landlord
 from app.extensions import db
-from flask import Blueprint, request, jsonify, url_for
+from flask import Blueprint, request, jsonify 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-# Blueprint for landlord-related endpoints
-landlords_bp = Blueprint("landlords", __name__)
+# Blueprint for property-related endpoints
+properties_bp = Blueprint("properties", __name__)
 
 def get_current_user():
     """Get the current user from the JWT token."""
@@ -19,7 +18,7 @@ def error_response(message, status_code):
     return jsonify({"error": message}), status_code
 
 # Create property
-@landlords_bp.route("/properties", methods=["POST"])
+@properties_bp.route("", methods=["POST"])
 @jwt_required()
 def create_landlord_property():
     """
@@ -63,7 +62,7 @@ def create_landlord_property():
         return error_response("An error occurred while creating the property.", 500)
 
 # Get all properties for a landlord
-@landlords_bp.route("/properties", methods=["GET"])
+@properties_bp.route("", methods=["GET"])
 @jwt_required()
 def get_landlord_properties():
     """
@@ -100,7 +99,7 @@ def get_landlord_properties():
     })
 
 # Get a single property
-@landlords_bp.route("/properties/<int:property_id>", methods=["GET"])
+@properties_bp.route("/<int:property_id>", methods=["GET"])
 @jwt_required()
 def get_property(property_id):
     """

@@ -1,5 +1,5 @@
 from flask import Flask
-from app.routes.landlords import landlords_bp
+from app.routes.properties import properties_bp
 from app.routes.auth import auth_bp
 from app.routes.users import users_bp
 from app.extensions import cors, db, migrate, jwt
@@ -28,7 +28,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")
-    app.register_blueprint(landlords_bp, url_prefix="/api/landlords")
+    app.register_blueprint(properties_bp, url_prefix="/api/properties")
 
     return app
 
