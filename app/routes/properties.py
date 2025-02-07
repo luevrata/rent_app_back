@@ -123,3 +123,43 @@ def get_property(property_id):
         return jsonify(property.to_dict()), 200
     except Exception as e:
         return error_response("An error occurred while retrieving the property.", 500)
+    
+# Update property
+@properties_bp.route("/<int:property_id>", methods=["PUT"])
+@jwt_required()
+def update_property_address(property_id):
+    """
+    Update the address of a specific property for the authenticated landlord.
+
+    Path Parameters:
+        property_id (int): The ID of the property to update.
+
+    Returns:
+        JSON: Updated property details or an error message.
+    """
+    try:
+        # Authenticate user
+        user = get_current_user()
+        if not user or user.role != "Landlord":
+            return error_response("Unauthorized", 403)
+
+        # Check if property exists and belongs to the landlord
+        property = Property.query.filter_by(property_id=property_id, landlord_id=user.user_id).first()
+        if not property:
+            return error_response("Property not found", 404)
+
+        # Validate request payload
+        data = request.json
+        if not data or "address" not in data:
+            return error_response("Missing or invalid 'address' in the request body.", 400)
+
+        # Update the address
+        old_address = property.address  # For auditing/logging purposes
+        property.address = data["address"]
+        db.session.commit()
+
+        return jsonify(property.to_dict()), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return error_response("An error occurred while updating the property.", 500)
