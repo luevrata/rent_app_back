@@ -24,7 +24,7 @@ class TestCreateProperty:
         assert property is not None
         assert property.address == "123 Test Street"
 
-    def test_unauthorized_role(self, client, create_test_user, auth_token):
+    def test_unauthorized_role(self, client, auth_token):
         """Test property creation by an unauthorized user (tenant)."""
         payload = {
             "address": "123 Test Street"
@@ -89,11 +89,11 @@ class TestCreateProperty:
 class TestGetProperties:
     """Tests for GET /api/properties endpoint."""
 
-    def test_success(self, client, session, landlord_token, create_test_landlord_1):
+    def test_success(self, client, session, landlord_token, test_landlord_1):
         """Test successful retrieval of all properties for a landlord."""
         properties = [
-            Property(address="123 Main Street", landlord_id=create_test_landlord_1.user_id),
-            Property(address="456 Elm Street", landlord_id=create_test_landlord_1.user_id)
+            Property(address="123 Main Street", landlord_id=test_landlord_1.user_id),
+            Property(address="456 Elm Street", landlord_id=test_landlord_1.user_id)
         ]
         session.add_all(properties)
         session.commit()
@@ -107,10 +107,10 @@ class TestGetProperties:
         assert response.json["properties"][0]["address"] == "123 Main Street"
         assert response.json["properties"][1]["address"] == "456 Elm Street"
 
-    def test_pagination(self, client, session, landlord_token, create_test_landlord_1):
+    def test_pagination(self, client, session, landlord_token, test_landlord_1):
         """Test pagination when retrieving properties."""
         for i in range(15):
-            property = Property(address=f"Property {i}", landlord_id=create_test_landlord_1.user_id)
+            property = Property(address=f"Property {i}", landlord_id=test_landlord_1.user_id)
             session.add(property)
         session.commit()
 
@@ -130,11 +130,11 @@ class TestGetProperties:
         assert response.json["page"] == 2
         assert len(response.json["properties"]) == 5
 
-    def test_filter_by_status(self, client, session, landlord_token, create_test_landlord_1):
+    def test_filter_by_status(self, client, session, landlord_token, test_landlord_1):
         """Test filtering properties by status."""
         properties = [
-            Property(address="123 Main Street", landlord_id=create_test_landlord_1.user_id, status="rented"),
-            Property(address="456 Elm Street", landlord_id=create_test_landlord_1.user_id, status="vacant")
+            Property(address="123 Main Street", landlord_id=test_landlord_1.user_id, status="rented"),
+            Property(address="456 Elm Street", landlord_id=test_landlord_1.user_id, status="vacant")
         ]
         session.add_all(properties)
         session.commit()
@@ -172,9 +172,9 @@ class TestGetProperties:
 class TestGetProperty:
     """Tests for GET /api/properties/<property_id> endpoint."""
 
-    def test_success(self, client, session, landlord_token, create_test_landlord_1):
+    def test_success(self, client, session, landlord_token, test_landlord_1):
         """Test successful retrieval of a specific property."""
-        property = Property(address="789 Pine Street", landlord_id=create_test_landlord_1.user_id)
+        property = Property(address="789 Pine Street", landlord_id=test_landlord_1.user_id)
         session.add(property)
         session.commit()
 
@@ -192,9 +192,9 @@ class TestGetProperty:
         assert response.status_code == 404
         assert response.json["error"] == "Property not found"
 
-    def test_unauthorized_access(self, client, auth_token, session, create_test_landlord_1):
+    def test_unauthorized_access(self, client, auth_token, session, test_landlord_1):
         """Test unauthorized access to a property by another user."""
-        property = Property(address="101 Main Street", landlord_id=create_test_landlord_1.user_id)
+        property = Property(address="101 Main Street", landlord_id=test_landlord_1.user_id)
         session.add(property)
         session.commit()
 
@@ -204,9 +204,9 @@ class TestGetProperty:
         assert response.status_code == 403
         assert response.json["error"] == "Unauthorized"
 
-    def test_no_token(self, client, session, create_test_landlord_1):
+    def test_no_token(self, client, session, test_landlord_1):
         """Test accessing property details without an authentication token."""
-        property = Property(address="202 Main Street", landlord_id=create_test_landlord_1.user_id)
+        property = Property(address="202 Main Street", landlord_id=test_landlord_1.user_id)
         session.add(property)
         session.commit()
 
@@ -215,10 +215,10 @@ class TestGetProperty:
         assert response.status_code == 401
         assert response.json.get("msg") == "Missing Authorization Header"
 
-    def test_database_error(self, client, landlord_token, mocker, session, create_test_landlord_1):
+    def test_database_error(self, client, landlord_token, mocker, session, test_landlord_1):
         """Test server error due to database issues during property retrieval."""
         # Add a property to the session for context
-        property = Property(address="303 Elm Street", landlord_id=create_test_landlord_1.user_id)
+        property = Property(address="303 Elm Street", landlord_id=test_landlord_1.user_id)
         session.add(property)
         session.commit()
 
@@ -236,3 +236,82 @@ class TestGetProperty:
         assert response.json["error"] == "An error occurred while retrieving the property."
 
 
+class TestUpdateProperty:
+    """Tests for PUT /api/properties/<property_id> endpoint."""
+
+    def test_update_property_success(self, client, session, landlord_token, test_property_1):
+        """Test successful update of a property's address."""
+        payload = {"address": "456 Updated Street"}
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.put(
+            f"/api/properties/{test_property_1.property_id}",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 200
+        assert response.json["address"] == "456 Updated Street"
+
+        updated_property = session.get(Property, test_property_1.property_id)
+        assert updated_property.address == "456 Updated Street"
+
+    def test_update_property_unauthorized(self, client, auth_token, session, test_property_1):
+        """Test unauthorized update of a property's address."""
+        payload = {"address": "456 Unauthorized Street"}
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
+        response = client.put(
+            f"/api/properties/{test_property_1.property_id}",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 403
+        assert response.json["error"] == "Unauthorized"
+
+        # Verify the property remains unchanged
+        unchanged_property = session.get(Property, test_property_1.property_id)
+        assert unchanged_property.address == "123 Test Street"
+
+    def test_update_property_not_found(self, client, landlord_token):
+        """Test update of a non-existent property."""
+        payload = {"address": "456 Nonexistent Street"}
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.put(
+            "/api/properties/999",  # Assuming ID 999 does not exist
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 404
+        assert response.json["error"] == "Property not found"
+
+    def test_update_property_no_token(self, client, test_property_1):
+        """Test update without authentication token."""
+        payload = {"address": "456 No Token Street"}
+
+        response = client.put(
+            f"/api/properties/{test_property_1.property_id}",
+            json=payload
+        )
+
+        assert response.status_code == 401
+        assert response.json["msg"] == "Missing Authorization Header"
+
+    def test_update_property_database_error(self, client, session, landlord_token, mocker, test_property_1):
+        """Test server error during property update."""
+        payload = {"address": "456 DB Error Street"}
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        mocker.patch.object(session, "commit", side_effect=Exception("Database error"))
+
+        response = client.put(
+            f"/api/properties/{test_property_1.property_id}",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 500
+        assert response.json["error"] == "An error occurred while updating the property."
