@@ -1,3 +1,6 @@
+from datetime import datetime
+from app.models.groupChat import GroupChat
+from app.models.tenancy import Tenancy
 from app.models.user import User
 from app.models.property import Property
 from app.extensions import db
@@ -154,7 +157,6 @@ def update_property_address(property_id):
             return error_response("Missing or invalid 'address' in the request body.", 400)
 
         # Update the address
-        old_address = property.address  # For auditing/logging purposes
         property.address = data["address"]
         db.session.commit()
 
@@ -163,3 +165,85 @@ def update_property_address(property_id):
     except Exception as e:
         db.session.rollback()
         return error_response("An error occurred while updating the property.", 500)
+
+# Create tenancy for a property
+@properties_bp.route("/<int:property_id>/tenancies", methods=["POST"])
+@jwt_required()
+def create_property_tenancy(property_id):
+    """
+    Create a new tenancy for a specific property.
+
+    Path Parameters:
+        property_id (int): The ID of the property to create a tenancy for.
+
+    Request Body:
+        rent_due (float): The rent amount due
+        lease_start_date (str): Start date of the lease (YYYY-MM-DD)
+        lease_end_date (str): End date of the lease (YYYY-MM-DD) (optional)
+
+    Returns:
+        JSON: Details of the newly created tenancy or an error message.
+    """
+    try:
+        # Authenticate user
+        user = get_current_user()
+        if not user or user.role != "Landlord":
+            return error_response("Unauthorized", 403)
+
+        # Check if property exists and belongs to the landlord
+        property = Property.query.filter_by(property_id=property_id, landlord_id=user.user_id).first()
+        if not property:
+            return error_response("Property not found", 404)
+
+        # Validate request payload
+        data = request.json
+        required_fields = ["rent_due", "lease_start_date"]
+        if not data or not all(field in data for field in required_fields):
+            return error_response("Missing required fields", 400)
+
+        try:
+            lease_start_date = datetime.strptime(data["lease_start_date"], "%Y-%m-%d").date()
+            lease_end_date = None  # Initialize as None by default
+            
+            # Only try to parse lease_end_date if it's provided and not empty
+            if data.get("lease_end_date"):
+                lease_end_date = datetime.strptime(data["lease_end_date"], "%Y-%m-%d").date()
+        except ValueError:
+            return error_response("Invalid date format. Use YYYY-MM-DD", 400)
+
+        # Create group chat first
+        group_chat = GroupChat(
+            group_name=f"Property Chat - {property.address}"
+        )
+        db.session.add(group_chat)
+        db.session.flush()  # Get the group_chat_id without committing
+
+        # Create new tenancy with explicit None for lease_end_date if not provided
+        new_tenancy = Tenancy(
+            property_id=property_id,
+            rent_due=float(data["rent_due"]),
+            lease_start_date=lease_start_date,
+            lease_end_date=lease_end_date,  # This will be None if not provided
+            group_chat_id=group_chat.group_chat_id
+        )
+
+        db.session.add(new_tenancy)
+        db.session.commit()
+
+        response_data = {
+            "tenancy_id": new_tenancy.tenancy_id,
+            "property_id": new_tenancy.property_id,
+            "rent_due": float(new_tenancy.rent_due),
+            "lease_start_date": new_tenancy.lease_start_date.isoformat(),
+            "lease_end_date": new_tenancy.lease_end_date.isoformat() if new_tenancy.lease_end_date else None,
+            "group_chat": {
+                "group_chat_id": group_chat.group_chat_id,
+                "group_name": group_chat.group_name
+            }
+        }
+
+        return jsonify(response_data), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return error_response("An error occurred while creating the tenancy.", 500)

@@ -7,7 +7,7 @@ class Tenancy(db.Model):
     property_id = db.Column(db.Integer, db.ForeignKey('property.property_id', ondelete='CASCADE'), nullable=False)
     rent_due = db.Column(db.Numeric(10, 2), nullable=False)
     lease_start_date = db.Column(db.Date, nullable=False)
-    lease_end_date = db.Column(db.Date)
+    lease_end_date = db.Column(db.Date, nullable=True) 
     group_chat_id = db.Column(db.Integer, db.ForeignKey('group_chat.group_chat_id'), unique=True, nullable=False)
 
     # Relationships
