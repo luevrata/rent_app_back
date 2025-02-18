@@ -20,12 +20,12 @@ def test_register_user_success(client, session):
     assert user.first_name == "New"
     assert user.role == "Tenant"
 
-def test_register_user_existing_email(client, create_test_user):
+def test_register_user_existing_email(client, test_tenant_1):
     """Test registration with an existing email."""
     payload = {
         "first_name": "Another",
         "last_name": "User",
-        "email": "test@example.com",  # Same as `create_test_user`
+        "email": test_tenant_1.email,
         "password": "password123",
         "role": "Tenant"
     }
@@ -46,23 +46,23 @@ def test_register_user_missing_fields(client):
     assert response.json["error"] == "Invalid data"
 
 
-def test_login_user_success(client, create_test_user):
+def test_login_user_success(client, test_tenant_1):
     """Test successful user login."""
     payload = {
-        "email": "test@example.com",
+        "email": test_tenant_1.email,
         "password": "password123"
     }
     response = client.post("/api/auth/login", json=payload)
     assert response.status_code == 200
     assert "token" in response.json
-    assert response.json["user"]["email"] == "test@example.com"
+    assert response.json["user"]["email"] == test_tenant_1.email
     assert response.json["user"]["role"] == "Tenant"
 
 
-def test_login_user_invalid_password(client, create_test_user):
+def test_login_user_invalid_password(client, test_tenant_1):
     """Test login with an invalid password."""
     payload = {
-        "email": "test@example.com",
+        "email": test_tenant_1.email,
         "password": "wrong_password"
     }
     response = client.post("/api/auth/login", json=payload)
@@ -70,7 +70,7 @@ def test_login_user_invalid_password(client, create_test_user):
     assert response.json["error"] == "Invalid password"
 
 
-def test_login_user_email_not_found(client, session):
+def test_login_user_email_not_found(client):
     """Test login with an email not in the database."""
     payload = {
         "email": "nonexistent@example.com",
