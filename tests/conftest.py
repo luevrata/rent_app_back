@@ -1,3 +1,6 @@
+from datetime import date
+from app.models.groupChat import GroupChat
+from app.models.tenancy import Tenancy
 import pytest
 from app import create_app
 from app.extensions import db, bcrypt
@@ -133,3 +136,33 @@ def test_property_1(session, test_landlord_1):
     session.add(property)
     session.commit()
     return property
+
+@pytest.fixture(scope="function")
+def test_groupChat_1(session):
+    """Create a test group chat."""
+    group_chat = GroupChat(group_name="Test Chat")
+    session.add(group_chat)
+    session.flush()  # Get the ID without committing
+    return group_chat
+
+@pytest.fixture(scope="function")
+def test_groupChat_1(session):
+    """Create a test group chat."""
+    group_chat = GroupChat(group_name="Test Chat")
+    session.add(group_chat)
+    session.flush()  # Get the ID without committing
+    return group_chat
+
+@pytest.fixture(scope="function")
+def test_tenancy_1(session, test_property_1, test_groupChat_1):
+    """Create a test tenancy."""
+    tenancy = Tenancy(
+        property_id=test_property_1.property_id,
+        rent_due=1000.00,
+        lease_start_date=date(2024, 1, 1),
+        lease_end_date=date(2024, 12, 31),
+        group_chat_id=test_groupChat_1.group_chat_id
+    )
+    session.add(tenancy)
+    session.commit()
+    return tenancy
