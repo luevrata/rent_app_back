@@ -98,3 +98,59 @@ def update_tenancy(tenancy_id):
         db.session.rollback()
         print(f"Error updating tenancy: {str(e)}")
         return error_response("An error occurred while updating the tenancy.", 500)
+    
+@tenancies_bp.route("/<int:tenancy_id>", methods=["GET"])
+@jwt_required()
+def get_tenancy(tenancy_id):
+    """
+    Retrieve details of a specific tenancy.
+
+    Path Parameters:
+        tenancy_id (int): The ID of the tenancy to retrieve.
+
+    Returns:
+        JSON: Tenancy details or an error message.
+    """
+    try:
+        # Authenticate user
+        user = get_current_user()
+        if not user:
+            return error_response("Unauthorized", 403)
+
+        # Get tenancy
+        tenancy = db.session.get(Tenancy, tenancy_id)
+        if not tenancy:
+            return error_response("Tenancy not found", 404)
+
+        # Get associated property
+        property = db.session.get(Property, tenancy.property_id)
+        if not property:
+            return error_response("Associated property not found", 404)
+
+        # Check authorization
+        if user.role == "Landlord" and property.landlord_id != user.user_id:
+            return error_response("Unauthorized access to tenancy", 403)
+        elif user.role == "Tenant":
+            # Check if the tenant is associated with this tenancy
+            is_tenant = any(tt.tenant_id == user.user_id for tt in tenancy.tenancy_tenants)
+            if not is_tenant:
+                return error_response("Unauthorized access to tenancy", 403)
+
+        # Format response
+        response_data = {
+            "tenancy_id": tenancy.tenancy_id,
+            "property_id": tenancy.property_id,
+            "rent_due": float(tenancy.rent_due),
+            "lease_start_date": tenancy.lease_start_date.isoformat(),
+            "lease_end_date": tenancy.lease_end_date.isoformat() if tenancy.lease_end_date else None,
+            "group_chat": {
+                "group_chat_id": tenancy.group_chat.group_chat_id,
+                "name": tenancy.group_chat.group_name
+            }
+        }
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"Error retrieving tenancy: {str(e)}")
+        return error_response("An error occurred while retrieving the tenancy.", 500)
