@@ -1,4 +1,7 @@
+from datetime import date
+from app.models.groupChat import GroupChat
 from app.models.property import Property
+from app.models.tenancy import Tenancy
 
 class TestCreateProperty:
     """Tests for POST /api/properties endpoint."""
@@ -315,3 +318,190 @@ class TestUpdateProperty:
 
         assert response.status_code == 500
         assert response.json["error"] == "An error occurred while updating the property."
+
+class TestCreatePropertyTenancy:
+    """Tests for POST /api/properties/<property_id>/tenancies endpoint."""
+
+    def test_create_tenancy_success(self, client, session, landlord_token, test_property_1):
+        """Test successful creation of a tenancy with all required fields."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01",
+            "lease_end_date": "2024-12-31"
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 201
+        
+        # Verify response data
+        assert response.json["property_id"] == test_property_1.property_id
+        assert float(response.json["rent_due"]) == 1000.00
+        assert response.json["lease_start_date"] == "2024-01-01"
+        assert response.json["lease_end_date"] == "2024-12-31"
+        assert "group_chat" in response.json
+        assert "group_chat_id" in response.json["group_chat"]
+        assert "group_name" in response.json["group_chat"]
+        assert response.json["group_chat"]["group_name"] == f"Property Chat - {test_property_1.address}"
+
+        # Verify database entries
+        tenancy = session.query(Tenancy).first()
+        assert tenancy is not None
+        assert tenancy.property_id == test_property_1.property_id
+        assert float(tenancy.rent_due) == 1000.00
+        assert tenancy.lease_start_date == date(2024, 1, 1)
+        assert tenancy.lease_end_date == date(2024, 12, 31)
+
+        # Verify group chat creation
+        group_chat = session.query(GroupChat).first()
+        assert group_chat is not None
+        assert group_chat.group_name == f"Property Chat - {test_property_1.address}"
+
+    def test_create_tenancy_without_end_date(self, client, session, landlord_token, test_property_1):
+        """Test successful creation of a tenancy without an end date."""
+        # Clear any existing tenancies to ensure clean state
+        session.query(Tenancy).delete()
+        session.commit()
+        
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01"
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 201
+        assert response.json["lease_end_date"] is None
+
+        # Refresh session to ensure we get the latest data
+        session.expire_all()
+        tenancy = session.query(Tenancy).first()
+        assert tenancy.lease_end_date is None
+
+    def test_create_tenancy_unauthorized(self, client, auth_token, test_property_1):
+        """Test tenancy creation by an unauthorized user (tenant)."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01"
+        }
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 403
+        assert response.json["error"] == "Unauthorized"
+
+    def test_create_tenancy_property_not_found(self, client, landlord_token):
+        """Test tenancy creation for a non-existent property."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01"
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.post(
+            "/api/properties/999/tenancies",  # Assuming ID 999 does not exist
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 404
+        assert response.json["error"] == "Property not found"
+
+    def test_create_tenancy_missing_required_fields(self, client, landlord_token, test_property_1):
+        """Test tenancy creation with missing required fields."""
+        # Test missing rent_due
+        payload1 = {
+            "lease_start_date": "2024-01-01"
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload1,
+            headers=headers
+        )
+
+        assert response.status_code == 400
+        assert response.json["error"] == "Missing required fields"
+
+        # Test missing lease_start_date
+        payload2 = {
+            "rent_due": 1000.00
+        }
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload2,
+            headers=headers
+        )
+
+        assert response.status_code == 400
+        assert response.json["error"] == "Missing required fields"
+
+    def test_create_tenancy_invalid_date_format(self, client, landlord_token, test_property_1):
+        """Test tenancy creation with invalid date formats."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "01-01-2024",  # Wrong format
+            "lease_end_date": "12-31-2024"     # Wrong format
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 400
+        assert response.json["error"] == "Invalid date format. Use YYYY-MM-DD"
+
+    def test_create_tenancy_database_error(self, client, session, landlord_token, test_property_1, mocker):
+        """Test tenancy creation with database error."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01"
+        }
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+
+        # Mock database error
+        mocker.patch.object(session, 'commit', side_effect=Exception("Database error"))
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload,
+            headers=headers
+        )
+
+        assert response.status_code == 500
+        assert response.json["error"] == "An error occurred while creating the tenancy."
+
+    def test_create_tenancy_no_token(self, client, test_property_1):
+        """Test tenancy creation without authentication token."""
+        payload = {
+            "rent_due": 1000.00,
+            "lease_start_date": "2024-01-01"
+        }
+
+        response = client.post(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            json=payload
+        )
+
+        assert response.status_code == 401
+        assert response.json["msg"] == "Missing Authorization Header"
