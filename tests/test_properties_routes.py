@@ -505,3 +505,96 @@ class TestCreatePropertyTenancy:
 
         assert response.status_code == 401
         assert response.json["msg"] == "Missing Authorization Header"
+
+class TestGetPropertyTenancies:
+    """Tests for GET /api/properties/<property_id>/tenancies endpoint."""
+
+    def test_get_tenancies_success(self, client, session, landlord_token, test_property_1):
+        """Test successful retrieval of property tenancies."""
+        # Clear any existing tenancies
+        session.query(Tenancy).delete()
+        session.commit()
+
+        # Create test tenancies
+        group_chat1 = GroupChat(group_name="Test Chat 1")
+        group_chat2 = GroupChat(group_name="Test Chat 2")
+        session.add_all([group_chat1, group_chat2])
+        session.flush()
+
+        tenancy1 = Tenancy(
+            property_id=test_property_1.property_id,
+            rent_due=1000.00,
+            lease_start_date=date(2024, 1, 1),
+            lease_end_date=date(2024, 12, 31),
+            group_chat_id=group_chat1.group_chat_id
+        )
+        tenancy2 = Tenancy(
+            property_id=test_property_1.property_id,
+            rent_due=1200.00,
+            lease_start_date=date(2024, 2, 1),
+            group_chat_id=group_chat2.group_chat_id
+        )
+        session.add_all([tenancy1, tenancy2])
+        session.commit()
+
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+        response = client.get(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            headers=headers
+        )
+
+        assert response.status_code == 200
+        assert len(response.json) == 2
+
+        # Verify first tenancy
+        assert response.json[0]["rent_due"] == 1000.00
+        assert response.json[0]["lease_start_date"] == "2024-01-01"
+        assert response.json[0]["lease_end_date"] == "2024-12-31"
+        assert response.json[0]["group_chat"]["name"] == "Test Chat 1"
+
+        # Verify second tenancy
+        assert response.json[1]["rent_due"] == 1200.00
+        assert response.json[1]["lease_start_date"] == "2024-02-01"
+        assert response.json[1]["lease_end_date"] is None
+        assert response.json[1]["group_chat"]["name"] == "Test Chat 2"
+
+    def test_get_tenancies_empty(self, client, session, landlord_token, test_property_1):
+        """Test getting tenancies for a property with no tenancies."""
+        # Clear any existing tenancies
+        session.query(Tenancy).delete()
+        session.commit()
+
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+        response = client.get(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            headers=headers
+        )
+
+        assert response.status_code == 200
+        assert response.json == []
+
+    def test_get_tenancies_property_not_found(self, client, landlord_token):
+        """Test getting tenancies for a non-existent property."""
+        headers = {"Authorization": f"Bearer {landlord_token}"}
+        response = client.get("/api/properties/999/tenancies", headers=headers)
+
+        assert response.status_code == 404
+        assert response.json["error"] == "Property not found"
+
+    def test_get_tenancies_unauthorized_access(self, client, session, auth_token, test_property_1):
+        """Test unauthorized access to property tenancies."""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        response = client.get(
+            f"/api/properties/{test_property_1.property_id}/tenancies",
+            headers=headers
+        )
+
+        assert response.status_code == 403
+        assert response.json["error"] == "Unauthorized access to property"
+
+    def test_get_tenancies_no_token(self, client, test_property_1):
+        """Test getting tenancies without authentication token."""
+        response = client.get(f"/api/properties/{test_property_1.property_id}/tenancies")
+
+        assert response.status_code == 401
+        assert response.json["msg"] == "Missing Authorization Header"

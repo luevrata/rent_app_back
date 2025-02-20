@@ -247,3 +247,56 @@ def create_property_tenancy(property_id):
     except Exception as e:
         db.session.rollback()
         return error_response("An error occurred while creating the tenancy.", 500)
+    
+
+@properties_bp.route("/<int:property_id>/tenancies", methods=["GET"])
+@jwt_required()
+def get_property_tenancies(property_id):
+    """
+    Retrieve all tenancies associated with a specific property.
+
+    Path Parameters:
+        property_id (int): The ID of the property to get tenancies for.
+
+    Returns:
+        JSON: List of tenancies associated with the property or an error message.
+    """
+    try:
+        # Authenticate user
+        user = get_current_user()
+        if not user:
+            return error_response("Unauthorized", 403)
+
+        # Check if property exists
+        property = db.session.get(Property, property_id)
+        if not property:
+            return error_response("Property not found", 404)
+
+        # Verify user has access to the property
+        if property.landlord_id != user.user_id:
+            return error_response("Unauthorized access to property", 403)
+
+        # Get all tenancies for the property
+        tenancies = Tenancy.query.filter_by(property_id=property_id).all()
+
+        # Format response
+        tenancies_data = []
+        for tenancy in tenancies:
+            tenancy_data = {
+                "tenancy_id": tenancy.tenancy_id,
+                "property_id": tenancy.property_id,
+                "rent_due": float(tenancy.rent_due),
+                "lease_start_date": tenancy.lease_start_date.isoformat(),
+                "lease_end_date": tenancy.lease_end_date.isoformat() if tenancy.lease_end_date else None,
+                "group_chat": {
+                    "group_chat_id": tenancy.group_chat.group_chat_id,
+                    "name": tenancy.group_chat.group_name
+                }
+            }
+            tenancies_data.append(tenancy_data)
+
+        return jsonify(tenancies_data), 200
+
+    except Exception as e:
+        print(f"Error retrieving tenancies: {str(e)}")
+        return error_response("An error occurred while retrieving tenancies.", 500)
