@@ -51,6 +51,7 @@ def session(app):
         db.session.query(Landlord).delete()
         db.session.query(User).delete()
         db.session.query(TenancyTenants).delete()
+        db.session.query(Tenancy).delete()
 
         yield db.session
 
@@ -109,20 +110,27 @@ def test_landlord_2(session):
     session.add(landlord)
     session.commit()
     return user
-
 @pytest.fixture(scope="function")
-def auth_token(app, test_tenant_1):
+def tenant_1_token(app, test_tenant_1):
     """Create a JWT token for the test tenant user."""
     with app.app_context():
         token = create_access_token(identity=str(test_tenant_1.user_id))
         return token
 
 @pytest.fixture(scope="function")
-def landlord_token(app, test_landlord_1):
+def landlord_1_token(app, test_landlord_1):
     """Create a JWT token for the test landlord user."""
     with app.app_context():
         token = create_access_token(identity=str(test_landlord_1.user_id))
         return token
+    
+@pytest.fixture(scope="function")
+def landlord_2_token(app, test_landlord_2):
+    """Create a JWT token for the test landlord user."""
+    with app.app_context():
+        token = create_access_token(identity=str(test_landlord_2.user_id))
+        return token
+
 
 @pytest.fixture(scope="function")
 def test_property_1(session, test_landlord_1):
@@ -140,24 +148,24 @@ def test_property_1(session, test_landlord_1):
 @pytest.fixture(scope="function")
 def test_groupChat_1(session):
     """Create a test group chat."""
-    group_chat = GroupChat(group_name="Test Chat")
+    group_chat = GroupChat(group_name="Test Chat 1")
     session.add(group_chat)
     session.flush()  # Get the ID without committing
     return group_chat
 
 @pytest.fixture(scope="function")
-def test_groupChat_1(session):
+def test_groupChat_2(session):
     """Create a test group chat."""
-    group_chat = GroupChat(group_name="Test Chat")
+    group_chat = GroupChat(group_name="Test Chat 2")
     session.add(group_chat)
     session.flush()  # Get the ID without committing
     return group_chat
 
 @pytest.fixture(scope="function")
-def test_tenancy_1(session, test_property_1, test_groupChat_1):
+def test_tenancy_1(session, test_property_rented, test_groupChat_1):
     """Create a test tenancy."""
     tenancy = Tenancy(
-        property_id=test_property_1.property_id,
+        property_id=test_property_rented.property_id,
         rent_due=1000.00,
         lease_start_date=date(2024, 1, 1),
         lease_end_date=date(2024, 12, 31),
@@ -166,3 +174,43 @@ def test_tenancy_1(session, test_property_1, test_groupChat_1):
     session.add(tenancy)
     session.commit()
     return tenancy
+
+@pytest.fixture(scope="function")
+def test_tenancy_2(session, test_property_rented, test_groupChat_2):
+    """Create a test tenancy."""
+    tenancy = Tenancy(
+            property_id=test_property_rented.property_id,
+            rent_due=1200.00,
+            lease_start_date=date(2024, 2, 1),
+            group_chat_id=test_groupChat_2.group_chat_id
+        )
+    session.add(tenancy)
+    session.commit()
+    return tenancy
+
+@pytest.fixture(scope="function")
+def test_tenancyTenants_1(session, test_tenancy_1, test_tenant_1):
+    """Create a test tenancy-tenant association."""
+    tenancy_tenant = TenancyTenants(
+        tenancy_id=test_tenancy_1.tenancy_id,
+        tenant_id=test_tenant_1.user_id
+    )
+    session.add(tenancy_tenant)
+    session.commit()
+    return tenancy_tenant
+
+@pytest.fixture(scope="function")
+def test_property_rented(session, test_landlord_1):
+    """Create a test property with rented status."""
+    property = Property(address="123 Test Street", landlord_id=test_landlord_1.user_id, status="rented")
+    session.add(property)
+    session.commit()
+    return property
+
+@pytest.fixture(scope="function")
+def test_property_vacant(session, test_landlord_1):
+    """Create a test property with vacant status."""
+    property = Property(address="456 Elm Street", landlord_id=test_landlord_1.user_id, status="vacant")
+    session.add(property)
+    session.commit()
+    return property
