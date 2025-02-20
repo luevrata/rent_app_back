@@ -1,7 +1,7 @@
 from flask import Flask
 from app.routes.properties import properties_bp
 from app.routes.auth import auth_bp
-from app.routes.users import users_bp
+from app.routes.tenancies import tenancies_bp
 from app.extensions import cors, db, migrate, jwt
 import os
 from dotenv import load_dotenv
@@ -27,8 +27,8 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(users_bp, url_prefix="/api/users")
     app.register_blueprint(properties_bp, url_prefix="/api/properties")
+    app.register_blueprint(tenancies_bp, url_prefix="/api/tenancies")
 
     return app
 
