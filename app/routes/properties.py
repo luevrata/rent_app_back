@@ -4,21 +4,12 @@ from app.models.tenancy import Tenancy
 from app.models.user import User
 from app.models.property import Property
 from app.extensions import db
+from app.services.utils import error_response, get_current_user
 from flask import Blueprint, request, jsonify 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # Blueprint for property-related endpoints
 properties_bp = Blueprint("properties", __name__)
-
-def get_current_user():
-    """Get the current user from the JWT token."""
-    current_user_id = int(get_jwt_identity())
-    user = db.session.get(User, current_user_id)
-    return user
-
-def error_response(message, status_code):
-    """Generate a consistent error response."""
-    return jsonify({"error": message}), status_code
 
 # Create property
 @properties_bp.route("", methods=["POST"])
