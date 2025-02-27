@@ -27,7 +27,7 @@ This repository contains the backend service for the Rent App. It is built with 
 ## Tech Stack
 
 - **Framework**: Flask
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL hosted on Azure
 - **ORM**: SQLAlchemy
 - **Authentication**: Flask-JWT-Extended
 - **Migrations**: Flask-Migrate
@@ -57,7 +57,7 @@ Start the PostgreSQL service:
 ### Run Database Migrations
 ```bash
 flask db init
-flask db migrate -m "Add models"
+flask db migrate -m "your message"
 flask db upgrade
 ```
 
